@@ -1,13 +1,10 @@
-import {
-  getSliceAsString,
-  getSliceAsNumber,
-  getInt16,
-  clamp
-} from './utils.js';
+importScripts("https://unpkg.com/comlink/dist/umd/comlink.js");
+importScripts("./utils.js");
+
 /**
  * @class
  */
-export class Brstm {
+class Brstm {
   /**
    *
    * @param {ArrayBuffer} arrayBuffer
@@ -489,3 +486,4 @@ export class Brstm {
     return result;
   }
 }
+Comlink.expose(Brstm);

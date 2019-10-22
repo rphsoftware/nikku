@@ -1,4 +1,5 @@
-import { Brstm } from './brstm/index.js';
+import * as Comlink from 'https://unpkg.com/comlink/dist/esm/comlink.mjs';
+// import { Brstm } from './brstm/index.js';
 import { AudioPlayer } from './audioPlayer.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,6 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
   let shouldCurrentTimeRender = false;
   let isElTimeDragging = false;
   let streamStates = [true];
+
+  const worker = new Worker('./src/brstm/index.js');
+  const Brstm = Comlink.wrap(worker);
 
   fileElement.setAttribute('disabled', 'disabled');
   function reset() {
@@ -45,20 +49,24 @@ document.addEventListener('DOMContentLoaded', () => {
     headerReader.addEventListener('loadend', async (ev) => {
       try {
         const buffer = headerReader.result;
+        console.log('worker', worker);
 
-        const brstm = new Brstm(buffer);
+        const brstm = await new Brstm(buffer);
+        console.log('brstm', brstm);
+
+        const metadata = await brstm.metadata;
 
         // console.log('brstm', brstm);
 
-        renderMetadata(brstm.metadata);
+        renderMetadata(metadata);
 
         if (audioPlayer) {
           audioPlayer.destroy();
         }
 
-        audioPlayer = new AudioPlayer(brstm.metadata);
+        audioPlayer = new AudioPlayer(metadata);
 
-        audioPlayer.load(brstm.getAllSamples());
+        audioPlayer.load(await brstm.getAllSamples());
 
         elTime.removeAttribute('disabled');
         elPlay.removeAttribute('disabled');
@@ -71,8 +79,8 @@ document.addEventListener('DOMContentLoaded', () => {
         elStreamSelect.removeAttribute('style');
         elStreamSelect.innerHTML = '';
 
-        if (brstm.metadata.numberChannels > 2) {
-          const numberStreams = Math.floor(brstm.metadata.numberChannels / 2);
+        if (metadata.numberChannels > 2) {
+          const numberStreams = Math.floor(metadata.numberChannels / 2);
           const text = document.createElement('span');
           text.textContent = 'Stream(s) enabled:';
           text.title =
@@ -96,8 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
           elStreamSelect.style.display = 'block';
         }
 
-        const amountTimeInS =
-          brstm.metadata.totalSamples / brstm.metadata.sampleRate;
+        const amountTimeInS = metadata.totalSamples / metadata.sampleRate;
         elTimeAmount.textContent = formatTime(amountTimeInS);
         elTime.max = amountTimeInS;
 
